@@ -40,11 +40,12 @@ def fetch_td():
             if best is None or md > best[0]:
                 best = (md, r.content, u)
         except Exception as e:  # noqa: BLE001
-            print(f"TD falhou: {u}: {e}")
+            print(f"::warning title=Tesouro Direto::falhou {u}: {e}")
     if best is None:
         sys.exit("Nenhuma fonte do Tesouro Direto respondeu.")
     (build / "td.csv").write_bytes(best[1])
     (build / "td_source.txt").write_text(f"{best[2]}\n{best[0].date()}\n")
+    print(f"::notice title=Tesouro Direto::dados até {best[0].date()} via {best[2]}")
     return best[0]
 
 
@@ -108,11 +109,11 @@ def fetch_anbima():
         raise ValueError("parâmetros não batem com a tabela de vértices")
     snap = {"data": data_ref, "params": params, **vert}
     (anbima_dir / f"{data_ref}.json").write_text(json.dumps(snap, ensure_ascii=False, indent=1))
-    print(f"ANBIMA ok: {data_ref}, {len(vert['vertices'])} vértices")
+    print(f"::notice title=ANBIMA::ETTJ de {data_ref} lida ({len(vert['vertices'])} vértices)")
 
 
 fetch_td()
 try:
     fetch_anbima()
 except Exception as e:  # noqa: BLE001
-    print(f"ANBIMA indisponível, seguindo sem a ETTJ do dia: {e}")
+    print(f"::warning title=ANBIMA::ETTJ indisponível, seguindo sem ela: {e}")
