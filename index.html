@@ -127,8 +127,7 @@ td.ext { color: var(--muted); font-style: italic; }
       <label class="tog"><input type="checkbox" id="showExt"> Estender além do último título</label>
     </div>
     <div class="row">
-      <label class="tog"><input type="checkbox" id="showBonds" checked> <span id="lblZero">LTN (pontos)</span></label>
-      <label class="tog"><input type="checkbox" id="showCoupon" checked> <span id="lblCoupon">NTN-F (losangos, na duration)</span></label>
+      <label class="tog"><input type="checkbox" id="showBonds" checked> <span id="lblZero">Títulos: LTN e NTN-F (pontos)</span></label>
       <label class="tog"><input type="checkbox" id="showAnbima" checked> ETTJ oficial ANBIMA (último dia)</label>
     </div>
     <div id="curveChart" class="chart" role="img" aria-label="Gráfico das curvas nas datas escolhidas"></div>
@@ -407,7 +406,6 @@ td.ext { color: var(--muted); font-style: italic; }
     renderPresets();
     const S = SER(), traces = [], ext = extOn();
     const showB = document.getElementById("showBonds").checked && curveK !== "impl";
-    const showC = document.getElementById("showCoupon").checked && curveK !== "impl";
     const showA = document.getElementById("showAnbima").checked;
     const ht = axis === "prazo" ? "%{x:.1f} anos: %{y:.2f}%" : "%{x|%d/%m/%Y}: %{y:.2f}%";
     sel.forEach((i, n) => {
@@ -417,11 +415,11 @@ td.ext { color: var(--muted); font-style: italic; }
         hovertemplate: ht + "<extra>" + nm + "</extra>" });
       if (ext && s.dash.x.length > 1) traces.push({ x: s.dash.x, y: s.dash.y, name: nm + " (extrapolado)", legendgroup: nm, showlegend: false, mode: "lines",
         line: { color: col, width: 1.4, dash: "dash" }, hovertemplate: ht + "<extra>" + nm + " · extrapolado</extra>" });
-      for (const [on, cp] of [[showB, false], [showC, true]]) {
+      for (const [on, cp] of [[showB, false], [showB, true]]) {
         if (!on) continue;
         const p = bondPoints(i, cp);
         if (p && p.x.length) traces.push({ x: p.x, y: p.y, text: p.tx, mode: "markers", showlegend: false, legendgroup: nm,
-          marker: cp ? { color: col, size: 9, symbol: "diamond-open", line: { width: 1.6 } } : { color: col, size: 7, line: { color: css("--panel"), width: 1 } },
+          marker: { color: col, size: 6, line: { color: css("--panel"), width: 1 } },
           hovertemplate: "%{text}: %{y:.2f}%<extra></extra>" });
       }
     });
@@ -447,7 +445,7 @@ td.ext { color: var(--muted); font-style: italic; }
     const notes = [];
     if (axis === "venc") notes.push("No eixo de vencimento, cada ponto é a taxa até aquela data: curvas de datas antigas começam mais à esquerda.");
     if (ext) notes.push("Tracejado = extrapolação do modelo além do último título; reflete a forma do Svensson, não negócios.");
-    if (curveK === "pre" && document.getElementById("showCoupon").checked) notes.push("NTN-F aparecem na duration com a própria taxa; a curva é taxa zero, então pequenas diferenças são esperadas.");
+    if (curveK !== "impl" && document.getElementById("showBonds").checked) notes.push("Títulos com cupom (" + (curveK === "pre" ? "NTN-F" : "NTN-B") + ") aparecem na duration com a própria taxa; a curva é de taxa zero, então pequenas diferenças são esperadas.");
     document.getElementById("curveNote").textContent = notes.join(" ");
     renderVtx();
   }
@@ -678,9 +676,7 @@ td.ext { color: var(--muted); font-style: italic; }
     curveK = b.dataset.k;
     document.querySelectorAll("#curveTabs button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
     document.getElementById("showBonds").disabled = curveK === "impl";
-    document.getElementById("showCoupon").disabled = curveK === "impl";
-    document.getElementById("lblZero").textContent = curveK === "ipca" ? "NTN-B Principal (pontos)" : "LTN (pontos)";
-    document.getElementById("lblCoupon").textContent = curveK === "ipca" ? "NTN-B com cupom (losangos, na duration)" : "NTN-F (losangos, na duration)";
+    document.getElementById("lblZero").textContent = curveK === "ipca" ? "Títulos: NTN-B Principal e NTN-B (pontos)" : "Títulos: LTN e NTN-F (pontos)";
     renderCurves();
   }));
   document.querySelectorAll("#rangeTabs button").forEach(b => b.addEventListener("click", () => {
@@ -698,7 +694,6 @@ td.ext { color: var(--muted); font-style: italic; }
     renderBonds(); renderBondChart();
   }));
   document.getElementById("showBonds").addEventListener("change", renderCurves);
-  document.getElementById("showCoupon").addEventListener("change", renderCurves);
   document.getElementById("showExt").addEventListener("change", renderCurves);
   document.querySelectorAll("#axisTabs button").forEach(b => b.addEventListener("click", () => {
     axis = b.dataset.a;
