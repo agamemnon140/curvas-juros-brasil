@@ -5,6 +5,11 @@ on:
     # 07:17 em Brasília, de terça a sábado: pega o fechamento do dia útil anterior
     - cron: "17 10 * * 2-6"
   workflow_dispatch:
+    inputs:
+      forcar:
+        description: "Publicar mesmo sem data nova (ex.: mudança no template)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -28,17 +33,26 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Baixar fontes, ajustar curvas e gerar a página
-        run: bash pipeline/atualizar.sh
+        run: |
+          echo "ANTES=$(python pipeline/ultima_data.py index.html)" >> "$GITHUB_ENV"
+          bash pipeline/atualizar.sh
 
       - name: Publicar se houver dado novo
+        env:
+          FORCAR: ${{ inputs.forcar }}
         run: |
-          if git diff --quiet -- index.html data/anbima && [ -z "$(git ls-files --others --exclude-standard data/anbima)" ]; then
-            echo "Sem dados novos."
+          depois=$(python pipeline/ultima_data.py index.html)
+          anbima_nova=$(git ls-files --others --exclude-standard data/anbima)
+          # o ajuste varia na 7ª casa entre máquinas: sem data nova, não publica
+          if [ "$depois" = "$ANTES" ] && [ -z "$anbima_nova" ] && [ "$FORCAR" != "true" ]; then
+            echo "Sem dados novos (última data: $depois)."
+            git checkout -- index.html
             exit 0
           fi
-          ate=$(sed -n 2p build/td_source.txt)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html data/anbima
-          git commit -m "Atualiza dados até ${ate}"
+          git diff --cached --quiet && { echo "Nada a publicar."; exit 0; }
+          git commit -m "Atualiza dados até ${depois}"
           git push
+          echo "::notice title=Publicado::dados até ${depois}"
