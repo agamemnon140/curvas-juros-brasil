@@ -423,7 +423,7 @@ td.ext { color: var(--muted); font-style: italic; }
           hovertemplate: "%{text}: %{y:.2f}%<extra></extra>" });
       }
     });
-    if (showA && sel.includes(LAST) && D.anbima.data === D.dates[LAST]) {
+    if (showA && D.anbima && sel.includes(LAST) && D.anbima.data === D.dates[LAST]) {
       const A = D.anbima, arr = curveK === "pre" ? A.pre : curveK === "ipca" ? A.ipca : A.impl;
       const xs = A.vertices.map(v => axis === "prazo" ? v / 252 : iso(addBD(dateMs[LAST], v)));
       traces.push({ x: xs, y: arr, name: "ANBIMA " + fmtD(A.data), mode: "lines",
@@ -644,6 +644,7 @@ td.ext { color: var(--muted); font-style: italic; }
   /* ---------- Validação ---------- */
   function renderVal() {
     const A = D.anbima;
+    if (!A) { document.getElementById("valDate").textContent = "sem referência disponível"; return; }
     const i = D.dates.indexOf(A.data);
     document.getElementById("valDate").textContent = fmtD(A.data);
     const tb = document.getElementById("valTbl"); tb.textContent = "";

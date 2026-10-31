@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Curvas de Juros Brasil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root {
+  /* Painel de trabalho: resumo no topo, curvas, histórico por vértice, títulos, metodologia. */
+  --bg: #f3f4f1;
+  --panel: #ffffff;
+  --ink: #18212b;
+  --muted: #5b6672;
+  --line: #dde1e3;
+  --accent: #2443b0;
+  --accent-soft: #e6ebfa;
+  --up: #b4462f;
+  --down: #237a57;
+  --s1: #2443b0; --s2: #d4802a; --s3: #2a9874; --s4: #b0457a; --s5: #7466cf; --s6: #848b94;
+  --font-display: "IBM Plex Serif", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --panel: #182029; --ink: #e6e9ec; --muted: #98a2ad; --line: #2b3540;
+    --accent: #8ea6ff; --accent-soft: #212d4d; --up: #f08b72; --down: #6fcfa3;
+    --s1: #8ea6ff; --s2: #f0a85a; --s3: #5fcca5; --s4: #e47fb2; --s5: #a99ef0; --s6: #9aa1aa;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --panel: #182029; --ink: #e6e9ec; --muted: #98a2ad; --line: #2b3540;
+  --accent: #8ea6ff; --accent-soft: #212d4d; --up: #f08b72; --down: #6fcfa3;
+  --s1: #8ea6ff; --s2: #f0a85a; --s3: #5fcca5; --s4: #e47fb2; --s5: #a99ef0; --s6: #9aa1aa;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 20px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 4vw, 32px); line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 70ch; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 500; width: fit-content; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+.tile .k { color: var(--muted); font-size: 13px; }
+.tile .v { font-family: var(--font-num); font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tile .d { font-family: var(--font-num); font-size: 12.5px; color: var(--muted); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; color: var(--ink); padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13.5px; cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.chip .sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.chip .x { color: var(--muted); font-size: 15px; line-height: 1; }
+button:focus-visible, input:focus-visible, select:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label.tog { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+input[type="date"], select { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
+.add { border: 1px dashed var(--accent); color: var(--accent); background: transparent; border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 14px; cursor: pointer; }
+.chart { width: 100%; height: 360px; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; font-size: 12.5px; }
+td.n { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.pos { color: var(--up); } .neg { color: var(--down); }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover { background: var(--accent-soft); }
+tbody tr.sel { background: var(--accent-soft); }
+.spark { display: block; }
+.method { display: grid; gap: 10px; color: var(--ink); }
+.method p { margin: 0; max-width: 72ch; }
+.method ul { margin: 0; padding-left: 18px; max-width: 72ch; }
+a { color: var(--accent); }
+td.ext { color: var(--muted); font-style: italic; }
+.empty { color: var(--muted); font-size: 14px; padding: 24px 0; text-align: center; }
+@media (max-width: 520px) { .chart { height: 300px; } .tile .v { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="pill" id="asof">—</span>
+    <h1>Curvas de juros e inflação implícita</h1>
+    <p class="sub">Curva prefixada, curva real (IPCA+) e inflação implícita dos títulos públicos federais, ajustadas dia a dia desde 2007. Compare datas, acompanhe vértices e veja as taxas de cada título.</p>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Resumo do último fechamento"></section>
+
+  <section class="card" aria-labelledby="h-curvas">
+    <div class="card-head">
+      <h2 id="h-curvas">Curvas por data</h2>
+      <div class="seg" role="group" aria-label="Curva" id="curveTabs">
+        <button type="button" data-k="pre" aria-pressed="true">Prefixada</button>
+        <button type="button" data-k="ipca" aria-pressed="false">Real (IPCA+)</button>
+        <button type="button" data-k="impl" aria-pressed="false">Inflação implícita</button>
+      </div>
+    </div>
+    <div class="row" id="presets" aria-label="Datas rápidas"></div>
+    <div class="row">
+      <label for="dateIn" class="hint">Outra data:</label>
+      <input type="date" id="dateIn">
+      <button type="button" class="add" id="addDate">Adicionar</button>
+      <span class="hint" id="dateMsg"></span>
+    </div>
+    <div class="row">
+      <span class="hint">Eixo:</span>
+      <div class="seg" role="group" aria-label="Eixo horizontal" id="axisTabs">
+        <button type="button" data-a="prazo" aria-pressed="true">Prazo (anos)</button>
+        <button type="button" data-a="venc" aria-pressed="false">Vencimento (data)</button>
+      </div>
+      <label class="tog"><input type="checkbox" id="showExt"> Estender além do último título</label>
+    </div>
+    <div class="row">
+      <label class="tog"><input type="checkbox" id="showBonds" checked> <span id="lblZero">Títulos: LTN e NTN-F (pontos)</span></label>
+      <label class="tog"><input type="checkbox" id="showAnbima" checked> ETTJ oficial ANBIMA (último dia)</label>
+    </div>
+    <div id="curveChart" class="chart" role="img" aria-label="Gráfico das curvas nas datas escolhidas"></div>
+    <p class="hint" id="curveNote"></p>
+    <div class="tbl-wrap"><table id="vtx"></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-hist">
+    <div class="card-head">
+      <h2 id="h-hist">Histórico por vértice</h2>
+      <div class="seg" role="group" aria-label="Período" id="rangeTabs">
+        <button type="button" data-y="1" aria-pressed="false">1a</button>
+        <button type="button" data-y="3" aria-pressed="true">3a</button>
+        <button type="button" data-y="5" aria-pressed="false">5a</button>
+        <button type="button" data-y="10" aria-pressed="false">10a</button>
+        <button type="button" data-y="0" aria-pressed="false">Tudo</button>
+      </div>
+    </div>
+    <div class="row">
+      <label for="metric" class="hint">Série:</label>
+      <select id="metric">
+        <option value="pre">Prefixada</option>
+        <option value="ipca">Real (IPCA+)</option>
+        <option value="impl" selected>Inflação implícita</option>
+        <option value="slopePre">Inclinação prefixada (5a − 1a)</option>
+        <option value="slopeReal">Inclinação real (10a − 3a)</option>
+      </select>
+      <span class="row" id="vtxChips"></span>
+    </div>
+    <div id="histChart" class="chart" role="img" aria-label="Gráfico histórico dos vértices"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-tit">
+    <div class="card-head">
+      <h2 id="h-tit">Títulos públicos</h2>
+      <div class="seg" role="group" aria-label="Mostrar taxa ou preço" id="modeTabs">
+        <button type="button" data-m="taxa" aria-pressed="true">Taxa</button>
+        <button type="button" data-m="preco" aria-pressed="false">Preço (PU)</button>
+      </div>
+    </div>
+    <p class="hint" id="bondHint">Toque numa linha para ver o histórico. Δ em bps; vermelho = perda para quem tem o título.</p>
+    <div class="row" id="groupChips"></div>
+    <div class="tbl-wrap"><table id="bondTbl"></table></div>
+    <div id="bondChart" class="chart" role="img" aria-label="Histórico da taxa do título selecionado"></div>
+  </section>
+
+  <section class="card method" aria-labelledby="h-met">
+    <h2 id="h-met">Como as curvas são calculadas</h2>
+    <p>As taxas vêm da série histórica oficial do Tesouro Direto (taxa de venda da manhã, a mais próxima do mercado secundário). Para cada dia, ajustamos o modelo Svensson aos preços dos títulos prefixados (LTN e NTN-F) e dos títulos IPCA+ (NTN-B Principal e NTN-B), descontando fluxo a fluxo em dias úteis/252 pelo calendário ANBIMA. Os lambdas ficam fixos nos valores atuais da ANBIMA, e títulos com erro acima de 40 bps são descartados do ajuste.</p>
+    <p>A inflação implícita é (1 + taxa prefixada) / (1 + taxa real) − 1, no mesmo prazo. Cada curva só aparece entre o primeiro e o último vencimento usado no ajuste. A ponta curta da curva real (abaixo de ~2,5 anos) não tem NTN-B e fica de fora; a ANBIMA a ancora com Selic e projeção de IPCA.</p>
+    <p><strong>Validação contra a ETTJ oficial da ANBIMA</strong> (<span id="valDate">—</span>, diferença em bps):</p>
+    <div class="tbl-wrap"><table id="valTbl"></table></div>
+    <ul>
+      <li>Taxas dos títulos: Tesouro Transparente, “Taxas dos Títulos Ofertados pelo Tesouro Direto” (cópia em <a href="https://github.com/ghostnetrn/bot-tesouro-direto">github.com/ghostnetrn/bot-tesouro-direto</a>).</li>
+      <li>Referência: <a href="https://www.anbima.com.br/informacoes/est-termo/CZ.asp">ANBIMA, Estrutura a Termo das Taxas de Juros Estimada</a>.</li>
+      <li>As taxas do Tesouro Direto incluem um pequeno spread de varejo; a curva fica alguns bps acima ou abaixo da curva de mercado.</li>
+    </ul>
+  </section>
+</div>
+
+<script type="application/json" id="data">/*__DATA__*/</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const L = D.lambdas;
+  const N = D.dates.length;
+  const LAST = N - 1;
+  const dateMs = D.dates.map(s => Date.parse(s + "T12:00:00Z"));
+  const tIdx = new Map(D.tdates.map((s, i) => [s, i]));
+
+  const fmtD = s => s.slice(8, 10) + "/" + s.slice(5, 7) + "/" + s.slice(0, 4);
+  const fmtP = (v, k = 2) => v == null || !isFinite(v) ? "—" : v.toFixed(k).replace(".", ",");
+  const fmtBp = v => v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(Math.round(v));
+
+  function sv(b, t, l1, l2) {
+    const a1 = (1 - Math.exp(-l1 * t)) / (l1 * t), a2 = (1 - Math.exp(-l2 * t)) / (l2 * t);
+    return b[0] + b[1] * a1 + b[2] * (a1 - Math.exp(-l1 * t)) + b[3] * (a2 - Math.exp(-l2 * t));
+  }
+  const KEY = { pre: "PRE", ipca: "IPCA" };
+  const EXT = { pre: 30, ipca: 40, impl: 30 };
+  function dom(k, i, ext) {
+    if (k === "impl") {
+      const a = dom("pre", i, ext), b = dom("ipca", i, ext);
+      if (!a || !b) return null;
+      const lo = Math.max(a[0], b[0]), hi = ext ? EXT.impl : Math.min(a[1], b[1]);
+      return lo < hi ? [lo, hi] : null;
+    }
+    const c = D[k];
+    if (c.b1[i] == null) return null;
+    return [c.tmin[i], ext ? Math.max(EXT[k], c.tmax[i]) : c.tmax[i]];
+  }
+  function rate(k, i, t, ext) {
+    const d = dom(k, i, ext);
+    if (!d || t < d[0] - 1e-9 || t > d[1] + 1e-9) return null;
+    if (k === "impl") {
+      const p = rate("pre", i, t, ext), r = rate("ipca", i, t, ext);
+      return ((1 + p / 100) / (1 + r / 100) - 1) * 100;
+    }
+    const c = D[k], l = L[KEY[k]];
+    return sv([c.b1[i], c.b2[i], c.b3[i], c.b4[i]], t, l[0], l[1]) * 100;
+  }
+  function metric(m, i, T) {
+    if (m === "slopePre") { const a = rate("pre", i, 5), b = rate("pre", i, 1); return a == null || b == null ? null : (a - b) * 100; }
+    if (m === "slopeReal") { const a = rate("ipca", i, 10), b = rate("ipca", i, 3); return a == null || b == null ? null : (a - b) * 100; }
+    return rate(m, i, T);
+  }
+  function idxOnOrBefore(ms) {
+    let lo = 0, hi = N - 1, ans = 0;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (dateMs[mid] <= ms) { ans = mid; lo = mid + 1; } else hi = mid - 1; }
+    return ans;
+  }
+  function shift(i, months) {
+    const d = new Date(dateMs[i]); d.setUTCMonth(d.getUTCMonth() - months);
+    return idxOnOrBefore(d.getTime());
+  }
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  const SER = () => ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"].map(css);
+  function baseLayout(extra) {
+    const ink = css("--ink"), muted = css("--muted"), line = css("--line");
+    return Object.assign({
+      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+      font: { family: css("--font-body"), color: ink, size: 12.5 },
+      margin: { l: 48, r: 12, t: 8, b: 40 }, separators: ",.",
+      hovermode: "x unified",
+      hoverlabel: { bgcolor: css("--panel"), bordercolor: line, font: { color: ink, family: css("--font-num"), size: 12 } },
+      legend: { orientation: "h", y: -0.18, x: 0, font: { color: muted, size: 12 } },
+      xaxis: { gridcolor: line, linecolor: line, zeroline: false, tickfont: { color: muted } },
+      yaxis: { gridcolor: line, linecolor: line, zeroline: false, ticksuffix: "%", tickfont: { color: muted } },
+    }, extra || {});
+  }
+  const CFG = { displayModeBar: false, responsive: true, locale: "pt-BR" };
+
+  /* ---------- Resumo ---------- */
+  function tiles() {
+    const i = LAST, j = shift(LAST, 1);
+    const items = [
+      ["Prefixada 1 ano", "pre", 1], ["Prefixada 5 anos", "pre", 5],
+      ["IPCA+ 5 anos", "ipca", 5], ["Implícita 5 anos", "impl", 5],
+    ];
+    const el = document.getElementById("tiles");
+    el.textContent = "";
+    for (const [lab, k, T] of items) {
+      const v = rate(k, i, T), v0 = rate(k, j, T);
+      const t = document.createElement("div"); t.className = "tile";
+      const a = document.createElement("span"); a.className = "k"; a.textContent = lab;
+      const b = document.createElement("span"); b.className = "v"; b.textContent = fmtP(v) + "%";
+      const c = document.createElement("span"); c.className = "d";
+      const dv = v != null && v0 != null ? (v - v0) * 100 : null;
+      c.textContent = fmtBp(dv) + " bps em 1 mês";
+      t.append(a, b, c); el.append(t);
+    }
+    document.getElementById("asof").textContent = "Fechamento de " + fmtD(D.dates[LAST]);
+  }
+
+  /* ---------- Curvas ---------- */
+  // calendário ANBIMA (feriados em dias de semana), datas ao meio-dia UTC
+  const DAY = 864e5;
+  const HOL = D.holidays.map(s => Date.parse(s + "T12:00:00Z"));
+  const iso = ms => new Date(ms).toISOString().slice(0, 10);
+  function lowerBound(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < x) lo = m + 1; else hi = m; } return lo; }
+  function weekdays(a, b) {
+    const n = Math.round((b - a) / DAY); if (n <= 0) return 0;
+    const w0 = new Date(a).getUTCDay(); let c = Math.floor(n / 7) * 5;
+    for (let k = 0; k < n % 7; k++) { const d = (w0 + k) % 7; if (d !== 0 && d !== 6) c++; }
+    return c;
+  }
+  const du = (a, b) => weekdays(a, b) - (lowerBound(HOL, b) - lowerBound(HOL, a)); // dias úteis em [a, b)
+  function isBD(ms) { const d = new Date(ms).getUTCDay(); if (d === 0 || d === 6) return false; const k = lowerBound(HOL, ms); return !(k < HOL.length && HOL[k] === ms); }
+  function addBD(ms, n) { let x = ms, c = 0; while (c < n) { if (isBD(x)) c++; x += DAY; } while (!isBD(x)) x += DAY; return x; }
+  function addYears(ms, T) { const d = new Date(ms); if (T < 1) d.setUTCMonth(d.getUTCMonth() + Math.round(T * 12)); else d.setUTCFullYear(d.getUTCFullYear() + T); return d.getTime(); }
+
+  let curveK = "pre", axis = "prazo";
+  const back = m => i => shift(i, m);
+  const PRESETS = [["Último", i => i], ["Dia anterior", i => Math.max(0, i - 1)], ["1 semana", i => idxOnOrBefore(dateMs[i] - 7 * DAY)],
+    ["1 mês", back(1)], ["3 meses", back(3)], ["6 meses", back(6)], ["1 ano", back(12)], ["3 anos", back(36)], ["5 anos", back(60)], ["10 anos", back(120)]];
+  let sel = [LAST, shift(LAST, 1), shift(LAST, 12)];
+  const MAXSEL = 6;
+  const VTX = { pre: [0.5, 1, 2, 3, 5, 7, 10], ipca: [3, 5, 7, 10, 15, 20, 30], impl: [3, 4, 5, 7, 10] };
+  const EXTV = { pre: [15, 20, 30], ipca: [35, 40], impl: [15, 20, 30] };
+  const XMAX = { pre: 10.5, ipca: 34, impl: 10.5 };
+  const extOn = () => document.getElementById("showExt").checked;
+
+  function renderPresets() {
+    const el = document.getElementById("presets"); el.textContent = "";
+    const shown = new Set();
+    for (const [lab, f] of PRESETS) {
+      const i = f(LAST);
+      if (shown.has(i)) continue; shown.add(i);
+      const on = sel.includes(i);
+      const b = document.createElement("button"); b.type = "button"; b.className = "chip";
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.title = fmtD(D.dates[i]);
+      if (on) { const s = document.createElement("span"); s.className = "sw"; s.style.background = SER()[sel.indexOf(i) % 6]; b.append(s); }
+      b.append(document.createTextNode(lab));
+      b.addEventListener("click", () => toggleSel(i));
+      el.append(b);
+    }
+    for (const i of sel) {
+      if (shown.has(i)) continue;
+      const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", "true");
+      const s = document.createElement("span"); s.className = "sw"; s.style.background = SER()[sel.indexOf(i) % 6];
+      const x = document.createElement("span"); x.className = "x"; x.textContent = "×";
+      b.append(s, document.createTextNode(fmtD(D.dates[i])), x);
+      b.setAttribute("aria-label", "Remover " + fmtD(D.dates[i]));
+      b.addEventListener("click", () => toggleSel(i));
+      el.append(b);
+    }
+  }
+  function toggleSel(i) {
+    const msg = document.getElementById("dateMsg"); msg.textContent = "";
+    if (sel.includes(i)) { if (sel.length > 1) sel = sel.filter(x => x !== i); }
+    else { if (sel.length >= MAXSEL) { msg.textContent = "Máximo de " + MAXSEL + " datas."; return; } sel.push(i); }
+    sel.sort((a, b) => b - a);
+    renderCurves();
+  }
+
+  // títulos do Tesouro na data i: sem cupom (taxa = taxa zero) e com cupom (YTM na duration)
+  const CUP = { "Tesouro Prefixado com Juros Semestrais": Math.sqrt(1.10) - 1, "Tesouro IPCA+ com Juros Semestrais": Math.sqrt(1.06) - 1 };
+  function bondPoints(i, coupon) {
+    const tipo = curveK === "pre" ? (coupon ? "Tesouro Prefixado com Juros Semestrais" : "Tesouro Prefixado")
+      : curveK === "ipca" ? (coupon ? "Tesouro IPCA+ com Juros Semestrais" : "Tesouro IPCA+") : null;
+    if (!tipo) return null;
+    const ti = tIdx.get(D.dates[i]); if (ti == null) return null;
+    const ref = dateMs[i], out = { x: [], y: [], tx: [] };
+    const sig = { "Tesouro Prefixado": "LTN", "Tesouro Prefixado com Juros Semestrais": "NTN-F", "Tesouro IPCA+": "NTN-B Principal", "Tesouro IPCA+ com Juros Semestrais": "NTN-B" }[tipo];
+    for (const b of D.bonds) {
+      if (b.tipo !== tipo) continue;
+      const k = ti - b.i0; if (k < 0 || k >= b.tv.length || b.tv[k] == null) continue;
+      const vm = Date.parse(b.venc + "T12:00:00Z"); if (vm <= ref) continue;
+      const y = b.tv[k], T = du(ref, vm) / 252;
+      let t = T, extra = "";
+      if (coupon) {
+        const c = CUP[tipo]; let num = 0, den = 0;
+        for (let d = new Date(vm); d.getTime() > ref; d.setUTCMonth(d.getUTCMonth() - 6)) {
+          const ms = d.getTime(), tt = du(ref, ms) / 252, cf = c + (ms === vm ? 1 : 0), pv = cf * Math.pow(1 + y / 100, -tt);
+          num += tt * pv; den += pv;
+        }
+        t = num / den; extra = " · duration " + fmtP(t, 1) + "a";
+      }
+      if (t < 0.03) continue;
+      out.x.push(axis === "prazo" ? t : iso(coupon ? addBD(ref, Math.round(t * 252)) : vm));
+      out.y.push(y); out.tx.push(sig + " " + fmtD(b.venc) + extra);
+    }
+    return out;
+  }
+
+  function curveSeries(i, ext) {
+    const k = curveK, d = dom(k, i, ext), core = dom(k, i, false);
+    if (!d) return null;
+    const pts = [];
+    if (axis === "prazo") {
+      const step = d[1] > 15 ? 0.1 : 0.05;
+      for (let t = d[0]; t <= d[1] + 1e-9; t += step) pts.push([t, +t.toFixed(3)]);
+      pts.push([d[1], d[1]]);
+    } else {
+      const ref = dateMs[i], step = (d[1] > 12 ? 14 : 7) * DAY;
+      for (let ms = ref + Math.max(1, Math.floor(d[0] * 365.25 - 10)) * DAY; ; ms += step) {
+        const t = du(ref, ms) / 252;
+        if (t < d[0]) continue;
+        if (t > d[1]) break;
+        pts.push([t, iso(ms)]);
+      }
+    }
+    const hi = core ? core[1] : -1;
+    const solid = { x: [], y: [] }, dash = { x: [], y: [] };
+    for (const [t, xv] of pts) {
+      const y = rate(k, i, t, ext); if (y == null) continue;
+      if (t <= hi + 1e-9) { solid.x.push(xv); solid.y.push(y); }
+      if (t >= hi - 1e-9) { dash.x.push(xv); dash.y.push(y); }
+    }
+    return { solid, dash };
+  }
+
+  function renderCurves() {
+    renderPresets();
+    const S = SER(), traces = [], ext = extOn();
+    const showB = document.getElementById("showBonds").checked && curveK !== "impl";
+    const showA = document.getElementById("showAnbima").checked;
+    const ht = axis === "prazo" ? "%{x:.1f} anos: %{y:.2f}%" : "%{x|%d/%m/%Y}: %{y:.2f}%";
+    sel.forEach((i, n) => {
+      const s = curveSeries(i, ext); if (!s) return;
+      const col = S[n % 6], nm = fmtD(D.dates[i]);
+      traces.push({ x: s.solid.x, y: s.solid.y, name: nm, legendgroup: nm, mode: "lines", line: { color: col, width: n === 0 ? 2.6 : 1.8 },
+        hovertemplate: ht + "<extra>" + nm + "</extra>" });
+      if (ext && s.dash.x.length > 1) traces.push({ x: s.dash.x, y: s.dash.y, name: nm + " (extrapolado)", legendgroup: nm, showlegend: false, mode: "lines",
+        line: { color: col, width: 1.4, dash: "dash" }, hovertemplate: ht + "<extra>" + nm + " · extrapolado</extra>" });
+      for (const [on, cp] of [[showB, false], [showB, true]]) {
+        if (!on) continue;
+        const p = bondPoints(i, cp);
+        if (p && p.x.length) traces.push({ x: p.x, y: p.y, text: p.tx, mode: "markers", showlegend: false, legendgroup: nm,
+          marker: { color: col, size: 6, line: { color: css("--panel"), width: 1 } },
+          hovertemplate: "%{text}: %{y:.2f}%<extra></extra>" });
+      }
+    });
+    if (showA && D.anbima && sel.includes(LAST) && D.anbima.data === D.dates[LAST]) {
+      const A = D.anbima, arr = curveK === "pre" ? A.pre : curveK === "ipca" ? A.ipca : A.impl;
+      const xs = A.vertices.map(v => axis === "prazo" ? v / 252 : iso(addBD(dateMs[LAST], v)));
+      traces.push({ x: xs, y: arr, name: "ANBIMA " + fmtD(A.data), mode: "lines",
+        line: { color: css("--muted"), width: 1.5, dash: "dot" }, hovertemplate: "ANBIMA %{y:.2f}%<extra></extra>" });
+    }
+    const lay = baseLayout();
+    const xmax = ext ? EXT[curveK] : XMAX[curveK];
+    if (axis === "prazo") lay.xaxis = Object.assign(lay.xaxis, { ticksuffix: " anos", range: [0, xmax] });
+    else {
+      const first = Math.min(...sel.map(i => dateMs[i]));
+      lay.xaxis = Object.assign(lay.xaxis, { type: "date", range: [iso(first), iso(addYears(dateMs[LAST], Math.ceil(xmax)))], hoverformat: "%d/%m/%Y" });
+    }
+    lay.legend.y = -0.12;
+    lay.yaxis.tickformat = ".1f";
+    lay.hovermode = "closest";
+    const el = document.getElementById("curveChart");
+    if (!traces.length) { Plotly.purge(el); el.innerHTML = '<p class="empty">Sem curva para essas datas.</p>'; }
+    else { if (el.querySelector(".empty")) el.textContent = ""; Plotly.react(el, traces, lay, CFG); }
+    const notes = [];
+    if (axis === "venc") notes.push("No eixo de vencimento, cada ponto é a taxa até aquela data: curvas de datas antigas começam mais à esquerda.");
+    if (ext) notes.push("Tracejado = extrapolação do modelo além do último título; reflete a forma do Svensson, não negócios.");
+    if (curveK !== "impl" && document.getElementById("showBonds").checked) notes.push("Títulos com cupom (" + (curveK === "pre" ? "NTN-F" : "NTN-B") + ") aparecem na duration com a própria taxa; a curva é de taxa zero, então pequenas diferenças são esperadas.");
+    document.getElementById("curveNote").textContent = notes.join(" ");
+    renderVtx();
+  }
+  function renderVtx() {
+    const tb = document.getElementById("vtx"); tb.textContent = "";
+    const ext = extOn();
+    const V = VTX[curveK].concat(ext ? EXTV[curveK] : []);
+    // coluna: prazo fixo (anos) ou data fixa (último dia + prazo)
+    const cols = V.map(T => axis === "prazo" ? { lab: T < 1 ? (T * 12) + "m" : T + "a", T } : { lab: fmtD(iso(addYears(dateMs[LAST], T))), ms: addYears(dateMs[LAST], T) });
+    const tAt = (c, i) => c.ms ? du(dateMs[i], c.ms) / 252 : c.T;
+    const th = document.createElement("thead"), tr = document.createElement("tr");
+    const h0 = document.createElement("th"); h0.textContent = axis === "prazo" ? "Data" : "Data base"; tr.append(h0);
+    for (const c of cols) { const h = document.createElement("th"); h.textContent = c.lab; tr.append(h); }
+    th.append(tr); tb.append(th);
+    const body = document.createElement("tbody");
+    const cell = (i, c) => {
+      const t = tAt(c, i), v = t > 0 ? rate(curveK, i, t, ext) : null, core = dom(curveK, i, false);
+      return { v, x: v != null && (!core || t > core[1] + 1e-9) };
+    };
+    for (const i of sel) {
+      const r = document.createElement("tr");
+      const c0 = document.createElement("td"); c0.textContent = fmtD(D.dates[i]); r.append(c0);
+      for (const c of cols) { const o = cell(i, c); const td = document.createElement("td"); td.className = "n" + (o.x ? " ext" : ""); td.textContent = fmtP(o.v); r.append(td); }
+      body.append(r);
+    }
+    if (sel.length > 1) {
+      const a = sel[0], b = sel[sel.length - 1];
+      const r = document.createElement("tr");
+      const c0 = document.createElement("td"); c0.textContent = "Δ " + fmtD(D.dates[b]).slice(0, 5) + "→" + fmtD(D.dates[a]).slice(0, 5) + " (bps)";
+      c0.style.color = css("--muted"); r.append(c0);
+      for (const c of cols) {
+        const x = cell(a, c), y = cell(b, c);
+        const td = document.createElement("td"); td.className = "n";
+        const dv = x.v != null && y.v != null ? (x.v - y.v) * 100 : null;
+        td.textContent = fmtBp(dv); if (dv != null && dv !== 0) td.classList.add(dv > 0 ? "pos" : "neg");
+        if (x.x || y.x) td.classList.add("ext");
+        r.append(td);
+      }
+      body.append(r);
+    }
+    tb.append(body);
+    if (ext) { const cap = document.createElement("caption"); cap.className = "hint"; cap.style.captionSide = "bottom"; cap.style.textAlign = "left"; cap.style.paddingTop = "6px"; cap.textContent = "Itálico = extrapolado."; tb.append(cap); }
+  }
+
+  /* ---------- Histórico ---------- */
+  let histYears = 3;
+  let histV = { pre: [1, 5], ipca: [5, 10], impl: [3, 5, 10] };
+  const HV = { pre: [0.5, 1, 2, 3, 5, 10], ipca: [3, 5, 10, 20, 30], impl: [3, 5, 7, 10] };
+  function renderVChips() {
+    const m = document.getElementById("metric").value;
+    const el = document.getElementById("vtxChips"); el.textContent = "";
+    if (!HV[m]) return;
+    for (const v of HV[m]) {
+      const on = histV[m].includes(v);
+      const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.textContent = v < 1 ? (v * 12) + "m" : v + "a";
+      b.addEventListener("click", () => {
+        if (on) { if (histV[m].length > 1) histV[m] = histV[m].filter(x => x !== v); }
+        else histV[m] = [...histV[m], v].sort((a, b) => a - b);
+        renderHist();
+      });
+      el.append(b);
+    }
+  }
+  function renderHist() {
+    renderVChips();
+    const m = document.getElementById("metric").value;
+    const S = SER(), x = D.dates, traces = [];
+    const list = HV[m] ? histV[m] : [null];
+    list.forEach((T, n) => {
+      const y = new Array(N);
+      for (let i = 0; i < N; i++) { const v = metric(m, i, T); y[i] = v == null ? null : +v.toFixed(m.startsWith("slope") ? 1 : 3); }
+      const name = T == null ? (m === "slopePre" ? "Pré 5a − 1a" : "Real 10a − 3a") : (T < 1 ? (T * 12) + " meses" : T + (T === 1 ? " ano" : " anos"));
+      traces.push({ x, y, name, mode: "lines", line: { color: S[n % 6], width: 1.6 }, connectgaps: false,
+        hovertemplate: m.startsWith("slope") ? "%{y:.0f} bps<extra>" + name + "</extra>" : "%{y:.2f}%<extra>" + name + "</extra>" });
+    });
+    const lay = baseLayout();
+    const end = D.dates[LAST];
+    const start = histYears ? D.dates[shift(LAST, 12 * histYears)] : D.dates[0];
+    lay.xaxis = Object.assign(lay.xaxis, { type: "date", range: [start, end], tickformat: histYears && histYears <= 3 ? "%m/%y" : "%Y", hoverformat: "%d/%m/%Y" });
+    if (m.startsWith("slope")) { lay.yaxis.ticksuffix = " bps"; lay.yaxis.zeroline = true; lay.yaxis.zerolinecolor = css("--muted"); }
+    // eixo y ajustado ao período visível
+    let lo = Infinity, hi = -Infinity; const i0 = histYears ? shift(LAST, 12 * histYears) : 0;
+    for (const tr of traces) for (let i = i0; i < N; i++) { const v = tr.y[i]; if (v != null) { if (v < lo) lo = v; if (v > hi) hi = v; } }
+    if (isFinite(lo)) { const pad = (hi - lo) * 0.08 || 0.5; lay.yaxis.range = [lo - pad, hi + pad]; }
+    Plotly.react(document.getElementById("histChart"), traces, lay, CFG);
+  }
+
+  /* ---------- Títulos ---------- */
+  const GROUPS = [
+    ["Todos", null],
+    ["Prefixado", ["Tesouro Prefixado", "Tesouro Prefixado com Juros Semestrais"]],
+    ["IPCA+", ["Tesouro IPCA+", "Tesouro IPCA+ com Juros Semestrais"]],
+    ["Renda+", ["Tesouro Renda+ Aposentadoria Extra"]],
+    ["Educa+", ["Tesouro Educa+"]],
+    ["Selic", ["Tesouro Selic"]],
+  ];
+  const ORDER = ["Tesouro Selic", "Tesouro Prefixado", "Tesouro Prefixado com Juros Semestrais", "Tesouro IPCA+", "Tesouro IPCA+ com Juros Semestrais", "Tesouro Renda+ Aposentadoria Extra", "Tesouro Educa+", "Tesouro IGPM+ com Juros Semestrais"];
+  const SHORT = {
+    "Tesouro Prefixado": "Prefixado", "Tesouro Prefixado com Juros Semestrais": "Prefixado c/ juros",
+    "Tesouro IPCA+": "IPCA+", "Tesouro IPCA+ com Juros Semestrais": "IPCA+ c/ juros",
+    "Tesouro Renda+ Aposentadoria Extra": "Renda+", "Tesouro Educa+": "Educa+", "Tesouro Selic": "Selic",
+    "Tesouro IGPM+ com Juros Semestrais": "IGP-M+ c/ juros",
+  };
+  let group = 1, selBond = null, mode = "taxa";
+  const isP = () => mode === "preco";
+  const fmtR = v => v == null ? "—" : "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtPct = v => v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2).replace(".", ",") + "%";
+  const ser = b => isP() ? b.pv : b.tv;
+  const tLast = D.tdates.length - 1;
+  const tMs = D.tdates.map(s => Date.parse(s + "T12:00:00Z"));
+  function tShift(months) { const d = new Date(tMs[tLast]); d.setUTCMonth(d.getUTCMonth() - months); const ms = d.getTime(); let k = tLast; while (k > 0 && tMs[k] > ms) k--; return k; }
+  function tvAt(b, ti) { const k = ti - b.i0; return k >= 0 && k < b.tv.length ? b.tv[k] : null; }
+  function valAt(b, ti) { const s = ser(b), k = ti - b.i0; return k >= 0 && k < s.length ? s[k] : null; }
+  const label = b => SHORT[b.tipo] + " " + b.venc.slice(0, 4);
+  function fmtRate(b, v) { return v == null ? "—" : (b.tipo === "Tesouro Selic" ? "S + " : "") + fmtP(v) + "%"; }
+  function spark(b) {
+    const n = 250, k1 = tLast - b.i0, k0 = Math.max(0, k1 - n);
+    const vals = ser(b).slice(k0, k1 + 1).filter(v => v != null);
+    const W = 90, H = 22;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("class", "spark"); svg.setAttribute("aria-hidden", "true");
+    if (vals.length < 2) return svg;
+    const lo = Math.min(...vals), hi = Math.max(...vals), r = hi - lo || 1;
+    const pts = vals.map((v, i) => [(i / (vals.length - 1)) * (W - 4) + 2, H - 3 - ((v - lo) / r) * (H - 6)]);
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    p.setAttribute("points", pts.map(q => q.join(",")).join(" ")); p.setAttribute("fill", "none");
+    p.setAttribute("stroke", css("--accent")); p.setAttribute("stroke-width", "1.3");
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    const e = pts[pts.length - 1]; c.setAttribute("cx", e[0]); c.setAttribute("cy", e[1]); c.setAttribute("r", "2.2"); c.setAttribute("fill", css("--accent"));
+    svg.append(p, c); return svg;
+  }
+  function renderGroups() {
+    const el = document.getElementById("groupChips"); el.textContent = "";
+    GROUPS.forEach(([lab], n) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = lab;
+      b.setAttribute("aria-pressed", n === group ? "true" : "false");
+      b.addEventListener("click", () => { group = n; renderBonds(); });
+      el.append(b);
+    });
+  }
+  function renderBonds() {
+    renderGroups();
+    const g = GROUPS[group][1];
+    const list = D.bonds.filter(b => b.ativo && (!g || g.includes(b.tipo)))
+      .sort((a, b) => ORDER.indexOf(a.tipo) - ORDER.indexOf(b.tipo) || a.venc.localeCompare(b.venc));
+    const i1 = tLast - 1, i21 = tShift(1), i252 = tShift(12);
+    const tb = document.getElementById("bondTbl"); tb.textContent = "";
+    const th = document.createElement("thead"), hr = document.createElement("tr");
+    const heads = isP() ? ["Título", "Vencimento", "PU venda", "PU compra", "Δ 1 dia", "Δ 1 mês", "Δ 12 meses", "Últimos 12 meses"]
+                        : ["Título", "Vencimento", "Taxa venda", "Taxa compra", "Δ 1 dia (bps)", "Δ 1 mês (bps)", "Δ 12 meses (bps)", "Últimos 12 meses"];
+    for (const h of heads) { const c = document.createElement("th"); c.textContent = h; hr.append(c); }
+    th.append(hr); tb.append(th);
+    const body = document.createElement("tbody");
+    for (const b of list) {
+      const r = document.createElement("tr"); r.className = "click" + (selBond === b ? " sel" : ""); r.tabIndex = 0;
+      const v = valAt(b, tLast);
+      const cells = isP() ? [label(b), fmtD(b.venc), fmtR(v), fmtR(b.pu)] : [label(b), fmtD(b.venc), fmtRate(b, v), fmtRate(b, b.tc)];
+      cells.forEach((t, n) => { const c = document.createElement("td"); if (n >= 2) c.className = "n"; c.textContent = t; r.append(c); });
+      for (const j of [i1, i21, i252]) {
+        const o = valAt(b, j);
+        const dv = v != null && o != null ? (isP() ? (v / o - 1) * 100 : (v - o) * 100) : null;
+        const c = document.createElement("td"); c.className = "n"; c.textContent = isP() ? fmtPct(dv) : fmtBp(dv);
+        // vermelho = perda para quem tem o título (taxa sobe / preço cai)
+        if (dv) c.classList.add((isP() ? dv < 0 : dv > 0) ? "pos" : "neg"); r.append(c);
+      }
+      const cs = document.createElement("td"); cs.append(spark(b)); r.append(cs);
+      const pick = () => { selBond = b; renderBonds(); renderBondChart(); };
+      r.addEventListener("click", pick);
+      r.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+      body.append(r);
+    }
+    tb.append(body);
+  }
+  function renderBondChart() {
+    const el = document.getElementById("bondChart");
+    const b = selBond;
+    if (!b) return;
+    const x = D.tdates.slice(b.i0, b.i0 + b.tv.length);
+    const lay = baseLayout();
+    lay.xaxis = Object.assign(lay.xaxis, { type: "date", hoverformat: "%d/%m/%Y" });
+    lay.legend = { orientation: "h", y: 1.08, x: 0, font: { color: css("--muted"), size: 12 } };
+    let tr;
+    if (isP()) {
+      lay.yaxis.ticksuffix = ""; lay.yaxis.tickprefix = "R$ "; lay.yaxis.tickformat = ",.0f";
+      lay.margin.l = 72;
+      tr = { y: b.pv, name: label(b) + " · PU de venda", hovertemplate: "R$ %{y:,.2f}<extra></extra>" };
+    } else {
+      lay.yaxis.tickformat = ".2f";
+      if (b.tipo === "Tesouro Selic") lay.yaxis.tickprefix = "S + ";
+      tr = { y: b.tv, name: label(b) + " · taxa de venda", hovertemplate: "%{y:.2f}%<extra></extra>" };
+    }
+    Plotly.react(el, [Object.assign(tr, { x, mode: "lines", showlegend: true, line: { color: css("--accent"), width: 1.6 } })], lay, CFG);
+  }
+
+  /* ---------- Validação ---------- */
+  function renderVal() {
+    const A = D.anbima;
+    if (!A) { document.getElementById("valDate").textContent = "sem referência disponível"; return; }
+    const i = D.dates.indexOf(A.data);
+    document.getElementById("valDate").textContent = fmtD(A.data);
+    const tb = document.getElementById("valTbl"); tb.textContent = "";
+    if (i < 0) return;
+    const V = [504, 756, 1008, 1260, 1764, 2520];
+    const th = document.createElement("thead"), hr = document.createElement("tr");
+    const h0 = document.createElement("th"); h0.textContent = "Curva"; hr.append(h0);
+    for (const v of V) { const h = document.createElement("th"); h.textContent = (v / 252) + "a"; hr.append(h); }
+    th.append(hr); tb.append(th);
+    const body = document.createElement("tbody");
+    for (const [lab, k, arr] of [["Prefixada", "pre", A.pre], ["Real (IPCA+)", "ipca", A.ipca], ["Implícita", "impl", A.impl]]) {
+      const r = document.createElement("tr");
+      const c0 = document.createElement("td"); c0.textContent = lab; r.append(c0);
+      for (const v of V) {
+        const ours = rate(k, i, v / 252), ref = arr[A.vertices.indexOf(v)];
+        const c = document.createElement("td"); c.className = "n";
+        c.textContent = fmtP(ref) + " / " + fmtP(ours) + " (" + fmtBp(ours == null ? null : (ours - ref) * 100) + ")";
+        r.append(c);
+      }
+      body.append(r);
+    }
+    tb.append(body);
+    const cap = document.createElement("caption"); cap.className = "hint"; cap.style.textAlign = "left"; cap.style.captionSide = "bottom"; cap.style.paddingTop = "6px";
+    cap.textContent = "ANBIMA / esta página (diferença em bps)";
+    tb.append(cap);
+  }
+
+  /* ---------- Eventos ---------- */
+  document.querySelectorAll("#curveTabs button").forEach(b => b.addEventListener("click", () => {
+    curveK = b.dataset.k;
+    document.querySelectorAll("#curveTabs button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    document.getElementById("showBonds").disabled = curveK === "impl";
+    document.getElementById("lblZero").textContent = curveK === "ipca" ? "Títulos: NTN-B Principal e NTN-B (pontos)" : "Títulos: LTN e NTN-F (pontos)";
+    renderCurves();
+  }));
+  document.querySelectorAll("#rangeTabs button").forEach(b => b.addEventListener("click", () => {
+    histYears = +b.dataset.y;
+    document.querySelectorAll("#rangeTabs button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    renderHist();
+  }));
+  document.getElementById("metric").addEventListener("change", renderHist);
+  document.querySelectorAll("#modeTabs button").forEach(b => b.addEventListener("click", () => {
+    mode = b.dataset.m;
+    document.querySelectorAll("#modeTabs button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    document.getElementById("bondHint").textContent = isP()
+      ? "Toque numa linha para ver o histórico. PU em R$ (títulos IPCA+ incluem a correção pelo IPCA); Δ em %; vermelho = perda."
+      : "Toque numa linha para ver o histórico. Δ em bps; vermelho = perda para quem tem o título.";
+    renderBonds(); renderBondChart();
+  }));
+  document.getElementById("showBonds").addEventListener("change", renderCurves);
+  document.getElementById("showExt").addEventListener("change", renderCurves);
+  document.querySelectorAll("#axisTabs button").forEach(b => b.addEventListener("click", () => {
+    axis = b.dataset.a;
+    document.querySelectorAll("#axisTabs button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    renderCurves();
+  }));
+  document.getElementById("showAnbima").addEventListener("change", renderCurves);
+  const dateIn = document.getElementById("dateIn");
+  dateIn.min = D.dates[0]; dateIn.max = D.dates[LAST]; dateIn.value = D.dates[shift(LAST, 24)];
+  document.getElementById("addDate").addEventListener("click", () => {
+    const msg = document.getElementById("dateMsg"); msg.textContent = "";
+    if (!dateIn.value) { msg.textContent = "Escolha uma data."; return; }
+    const ms = Date.parse(dateIn.value + "T12:00:00Z");
+    if (ms < dateMs[0]) { msg.textContent = "Histórico começa em " + fmtD(D.dates[0]) + "."; return; }
+    const i = idxOnOrBefore(ms);
+    if (sel.includes(i)) { msg.textContent = "Essa data já está no gráfico."; return; }
+    toggleSel(i);
+    if (D.dates[i] !== dateIn.value) document.getElementById("dateMsg").textContent = "Usando o dia útil anterior: " + fmtD(D.dates[i]) + ".";
+  });
+
+  function renderAll() { tiles(); renderCurves(); renderHist(); renderBonds(); renderBondChart(); renderVal(); }
+  selBond = D.bonds.find(b => b.ativo && b.tipo === "Tesouro IPCA+" && b.venc.startsWith("2035")) || D.bonds.find(b => b.ativo);
+  renderAll();
+  // tema: redesenha quando o host trocar claro/escuro
+  new MutationObserver(renderAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+})();
+</script>
+</body>
+</html>
