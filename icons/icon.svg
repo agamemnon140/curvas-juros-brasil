@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2a4a"/>
+      <stop offset="1" stop-color="#0f1626"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g stroke="#2a3a5c" stroke-width="6">
+    <line x1="200" y1="300" x2="824" y2="300"/>
+    <line x1="200" y1="460" x2="824" y2="460"/>
+    <line x1="200" y1="620" x2="824" y2="620"/>
+  </g>
+  <line x1="200" y1="780" x2="824" y2="780" stroke="#4a5b80" stroke-width="10" stroke-linecap="round"/>
+  <!-- curva real / mais antiga -->
+  <path d="M200 640 C 330 560, 470 535, 824 540" fill="none" stroke="#f0a85a" stroke-width="30" stroke-linecap="round" opacity="0.9"/>
+  <!-- curva prefixada -->
+  <path d="M200 700 C 300 430, 470 300, 824 280" fill="none" stroke="#8ea6ff" stroke-width="44" stroke-linecap="round"/>
+  <g fill="#8ea6ff" stroke="#0f1626" stroke-width="14">
+    <circle cx="300" cy="470" r="34"/>
+    <circle cx="470" cy="333" r="34"/>
+    <circle cx="660" cy="290" r="34"/>
+  </g>
+</svg>

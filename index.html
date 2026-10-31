@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Curvas de Juros Brasil</title>
+<meta name="theme-color" id="themeColor" content="#f3f4f1">
+<meta name="apple-mobile-web-app-title" content="Curvas Juros">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/icon-64.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>try { var m = localStorage.getItem("cj-tema"); if (m === "light" || m === "dark") document.documentElement.setAttribute("data-mode", m); } catch (e) {}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
@@ -89,13 +97,35 @@ a { color: var(--accent); }
 td.ext { color: var(--muted); font-style: italic; }
 .empty { color: var(--muted); font-size: 14px; padding: 24px 0; text-align: center; }
 @media (max-width: 520px) { .chart { height: 300px; } .tile .v { font-size: 22px; } }
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.seg.small button { padding: 4px 10px; font-size: 13px; }
+/* escolha explícita do leitor: vence o tema do sistema e o do host */
+:root[data-mode="light"] {
+    --bg: #f3f4f1; --panel: #ffffff; --ink: #18212b; --muted: #5b6672; --line: #dde1e3;
+    --accent: #2443b0; --accent-soft: #e6ebfa; --up: #b4462f; --down: #237a57;
+    --s1: #2443b0; --s2: #d4802a; --s3: #2a9874; --s4: #b0457a; --s5: #7466cf; --s6: #848b94;
+    color-scheme: light;
+}
+:root[data-mode="dark"] {
+    --bg: #11161c; --panel: #182029; --ink: #e6e9ec; --muted: #98a2ad; --line: #2b3540;
+    --accent: #8ea6ff; --accent-soft: #212d4d; --up: #f08b72; --down: #6fcfa3;
+    --s1: #8ea6ff; --s2: #f0a85a; --s3: #5fcca5; --s4: #e47fb2; --s5: #a99ef0; --s6: #9aa1aa;
+    color-scheme: dark;
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <span class="pill" id="asof">—</span>
+    <div class="top">
+      <span class="pill" id="asof">—</span>
+      <div class="seg small" role="group" aria-label="Tema" id="themeTabs">
+        <button type="button" data-t="light" aria-pressed="false">Claro</button>
+        <button type="button" data-t="dark" aria-pressed="false">Escuro</button>
+        <button type="button" data-t="system" aria-pressed="true">Sistema</button>
+      </div>
+    </div>
     <h1>Curvas de juros e inflação implícita</h1>
     <p class="sub">Curva prefixada, curva real (IPCA+) e inflação implícita dos títulos públicos federais, ajustadas dia a dia desde 2007. Compare datas, acompanhe vértices e veja as taxas de cada título.</p>
   </header>
@@ -719,8 +749,21 @@ td.ext { color: var(--muted); font-style: italic; }
   selBond = D.bonds.find(b => b.ativo && b.tipo === "Tesouro IPCA+" && b.venc.startsWith("2035")) || D.bonds.find(b => b.ativo);
   renderAll();
   // tema: redesenha quando o host trocar claro/escuro
-  new MutationObserver(renderAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+  // tema: claro / escuro / sistema (lembrado neste aparelho)
+  function syncTheme() {
+    const m = document.documentElement.getAttribute("data-mode") || "system";
+    document.querySelectorAll("#themeTabs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.t === m ? "true" : "false"));
+    document.getElementById("themeColor").setAttribute("content", css("--bg"));
+  }
+  document.querySelectorAll("#themeTabs button").forEach(b => b.addEventListener("click", () => {
+    const m = b.dataset.t;
+    if (m === "system") document.documentElement.removeAttribute("data-mode");
+    else document.documentElement.setAttribute("data-mode", m);
+    try { if (m === "system") localStorage.removeItem("cj-tema"); else localStorage.setItem("cj-tema", m); } catch (e) {}
+  }));
+  syncTheme();
+  new MutationObserver(() => { syncTheme(); renderAll(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-mode"] });
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { syncTheme(); renderAll(); });
 })();
 </script>
 </body>
