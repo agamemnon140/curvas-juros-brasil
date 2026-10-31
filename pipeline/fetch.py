@@ -51,7 +51,7 @@ def fetch_td():
 
 def num(x):
     if isinstance(x, (int, float, np.integer, np.floating)):
-        return float(x)
+        return None if np.isnan(x) else float(x)
     s = str(x).strip().replace("\xa0", "")
     if not re.fullmatch(r"-?[\d.]+(,\d+)?", s):
         return None
@@ -73,6 +73,8 @@ def fetch_anbima():
     r.raise_for_status()
     html = r.content.decode("latin1", errors="replace")
     tables = pd.read_html(io.StringIO(html), thousands=".", decimal=",")
+    global DESC
+    DESC = " | ".join(f"{t.shape[0]}x{t.shape[1]}: {' '.join(map(str, rows_of(t)[0]))[:60]}" for t in tables)[:600]
     params, data_ref, vert = {}, None, None
     for t in tables:
         rows = rows_of(t)
@@ -112,8 +114,9 @@ def fetch_anbima():
     print(f"::notice title=ANBIMA::ETTJ de {data_ref} lida ({len(vert['vertices'])} vértices)")
 
 
+DESC = "(não lidas)"
 fetch_td()
 try:
     fetch_anbima()
 except Exception as e:  # noqa: BLE001
-    print(f"::warning title=ANBIMA::ETTJ indisponível, seguindo sem ela: {e}")
+    print(f"::warning title=ANBIMA::ETTJ indisponível, seguindo sem ela: {type(e).__name__}: {e}. Tabelas: {DESC}")
